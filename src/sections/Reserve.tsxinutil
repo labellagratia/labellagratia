@@ -1,0 +1,220 @@
+import { useEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { MessageCircle, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CheckoutForm } from '@/components/CheckoutForm';
+import type { CartItem } from '@/types';
+
+gsap.registerPlugin(ScrollTrigger);
+
+interface ReserveProps {
+  cartItems: CartItem[];
+  cartTotal: number;
+  isOrderingOpen: boolean;
+}
+
+const generateInitialSlots = () => {
+  const slots: Record<string, number> = {};
+  let hour = 11;
+  let minute = 0;
+
+  while (hour < 15 || (hour === 15 && minute === 0)) {
+    const formatted = `${hour.toString().padStart(2, '0')}:${minute
+      .toString()
+      .padStart(2, '0')}`;
+    slots[formatted] = 6; // 6 pedidos por horário
+
+    minute += 20;
+    if (minute >= 60) {
+      minute = 0;
+      hour++;
+    }
+  }
+
+  return slots;
+};
+
+export function Reserve({
+  cartItems,
+  cartTotal,
+  isOrderingOpen,
+}: ReserveProps) {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [availableSlotsByTime, setAvailableSlotsByTime] = useState<Record<string, number>>(
+    generateInitialSlots()
+  );
+
+  // ===============================
+  // CARREGAR HORÁRIOS SALVOS
+  // ===============================
+  useEffect(() => {
+    const saved = localStorage.getItem('horariosLaBella');
+    if (saved) {
+      setAvailableSlotsByTime(JSON.parse(saved));
+    }
+  }, []);
+
+  // ===============================
+  // SALVAR HORÁRIOS
+  // ===============================
+  const persistSlots = (slots: Record<string, number>) => {
+    localStorage.setItem('horariosLaBella', JSON.stringify(slots));
+  };
+
+  // ===============================
+  // ENVIO WHATSAPP + CONTROLE VAGA
+  // ===============================
+  const enviarPedidoWhatsApp = (
+    nome: string,
+    telefone: string,
+    endereco: string,
+    horario: string,
+    observacoes?: string
+  ) => {
+    if (isSending) return;
+
+    if (!nome || !telefone || !endereco || !horario) {
+      alert('Preencha todos os dados.');
+      return;
+    }
+
+    if (!cartItems.length) {
+      alert('Carrinho vazio.');
+      return;
+    }
+
+    if (availableSlotsByTime[horario] <= 0) {
+      alert('Este horário está esgotado.');
+      return;
+    }
+
+    setIsSending(true);
+
+    const numeroWhatsApp = '5511945925632';
+    const numeroPedido = Date.now().toString().slice(-6);
+    const dataPedido = new Date().toLocaleString('pt-BR');
+
+    let mensagem = `🍝 *NOVO PEDIDO - LA BELLA GRATTIA*\n`;
+    mensagem += `🧾 Pedido Nº: ${numeroPedido}\n`;
+    mensagem += `📅 ${dataPedido}\n\n`;
+
+    mensagem += `👤 Cliente: ${nome}\n`;
+    mensagem += `📱 Telefone: ${telefone}\n`;
+    mensagem += `📍 Endereço: ${endereco}\n`;
+    mensagem += `⏰ Entrega: ${horario}\n\n`;
+
+    mensagem += `🛒 ITENS\n`;
+    mensagem += `━━━━━━━━━━━━━━━━━━━━\n`;
+
+    let totalCalculado = 0;
+
+    cartItems.forEach((item, index) => {
+      const subtotal = item.price * item.quantity;
+      totalCalculado += subtotal;
+
+      mensagem += `\n${index + 1}. ${item.name}\n`;
+      mensagem += `Qtd: ${item.quantity}x\n`;
+      mensagem += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
+
+      if (item.observations?.trim()) {
+        mensagem += `Obs: ${item.observations}\n`;
+      }
+    });
+
+    mensagem += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+    mensagem += `💰 TOTAL: R$ ${totalCalculado.toFixed(2)}\n\n`;
+
+    if (observacoes?.trim()) {
+      mensagem += `📝 Observações: ${observacoes}\n\n`;
+    }
+
+    mensagem += `Pedido realizado pelo site.`;
+
+    // 🔻 Decrementa vaga
+    const updatedSlots = {
+      ...availableSlotsByTime,
+      [horario]: availableSlotsByTime[horario] - 1,
+    };
+
+    setAvailableSlotsByTime(updatedSlots);
+    persistSlots(updatedSlots);
+
+    // 🔻 Salva cliente
+    localStorage.setItem(
+      'clienteLaBella',
+      JSON.stringify({ name: nome, phone: telefone, address: endereco })
+    );
+
+    const url = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(
+      mensagem
+    )}`;
+
+    window.location.href = url;
+  };
+
+  const totalRemainingSpots = Object.values(availableSlotsByTime).reduce(
+    (acc, curr) => acc + curr,
+    0
+  );
+
+  return (
+    <section ref={sectionRef} id="reservar" className="bg-[#0B0B10] py-24">
+
+      <div className="max-w-5xl mx-auto px-6">
+
+        <div className="flex justify-between items-center mb-10">
+          <h2 className="text-3xl text-white font-semibold">
+            Garanta seu sábado
+          </h2>
+
+          <span className="flex items-center gap-2 text-[#7B2CFF] font-mono text-sm">
+            <Users className="w-4 h-4" />
+            Vagas restantes: {totalRemainingSpots}
+          </span>
+        </div>
+
+        <button
+          onClick={() => setCheckoutOpen(true)}
+          disabled={!isOrderingOpen || cartItems.length === 0}
+          className="w-full bg-[#7B2CFF] text-white py-3 rounded-lg font-semibold disabled:opacity-50"
+        >
+          {cartItems.length === 0
+            ? 'Adicione itens ao carrinho'
+            : 'Finalizar Pedido'}
+        </button>
+
+      </div>
+
+      <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
+        <DialogContent className="bg-[#141419] max-w-lg max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Finalizar Pedido
+            </DialogTitle>
+          </DialogHeader>
+
+          <CheckoutForm
+            cartItems={cartItems}
+            total={cartTotal}
+            availableSlotsByTime={availableSlotsByTime}
+            onSubmit={(data) => {
+              enviarPedidoWhatsApp(
+                data.name,
+                data.phone,
+                data.address,
+                data.time,
+                data.observations
+              );
+              setCheckoutOpen(false);
+            }}
+            onCancel={() => setCheckoutOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
