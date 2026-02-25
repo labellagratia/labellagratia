@@ -3,6 +3,10 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronDown } from 'lucide-react';
 
+// ✅ IMPORTS DAS IMAGENS (caminho absoluto via alias @)
+import heroBg from '@/assets/hero_kitchen.jpg';
+import logoImg from '@/assets/log.png';
+
 gsap.registerPlugin(ScrollTrigger);
 
 interface HeroProps {
@@ -54,16 +58,12 @@ export function Hero({ onViewMenu }: HeroProps) {
           anticipatePin: 1,
           invalidateOnRefresh: true,
           onLeaveBack: () => {
-            // Reset to visible when scrolling back to top
             gsap.set([headline, subline, cta, microcopy], { opacity: 1, y: 0 });
             gsap.set(bg, { scale: 1, y: 0 });
           },
         },
       });
 
-      // ENTRANCE (0-30%): Hold visible (already entered via load)
-      // SETTLE (30-70%): Static
-      // EXIT (70-100%): Elements exit
       scrollTl
         .fromTo(
           contentRef.current,
@@ -90,10 +90,17 @@ export function Hero({ onViewMenu }: HeroProps) {
         className="absolute inset-0 z-0"
         style={{ opacity: 0 }}
       >
+        {/* ✅ Imagem importada via módulo (caminho resolvido pelo Vite) */}
         <img
-          src="/hero_kitchen.jpg"
+          src={heroBg}
           alt="Dark Kitchen"
           className="w-full h-full object-cover"
+          onError={(e) => {
+            console.error('Erro ao carregar hero_kitchen.jpg');
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            target.parentElement!.style.backgroundColor = 'hsl(var(--background))';
+          }}
         />
         <div className="vignette" />
       </div>
@@ -103,13 +110,18 @@ export function Hero({ onViewMenu }: HeroProps) {
         ref={contentRef}
         className="relative z-10 w-full h-full flex flex-col items-center justify-center"
       >
-              
-        {/* ✅ INSIRA O LOGO AQUI */}
+        
+        {/* ✅ Logo importado via módulo */}
         <div className="w-full flex justify-center mb-8">
           <img
-            src="/log.png"
+            src={logoImg}
             alt="La Bella Grattia Logo"
             className="h-24 w-auto object-contain"
+            onError={(e) => {
+              console.error('Erro ao carregar log.png');
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
           />
         </div>
         
@@ -140,7 +152,10 @@ export function Hero({ onViewMenu }: HeroProps) {
           </div>
 
           <div ref={ctaRef}>
-            <button onClick={onViewMenu} className="btn-primary flex items-center gap-2">
+            <button 
+              onClick={onViewMenu} 
+              className="btn-primary flex items-center gap-2"
+            >
               Ver o menu desta Semana
               <ChevronDown className="w-4 h-4" />
             </button>

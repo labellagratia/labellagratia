@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { mockMenu } from '@/data/mockMenu';
 import { Button } from '@/components/ui/button';
-import { Clock } from 'lucide-react';  // ✅ Removido Calendar
+import { Clock } from 'lucide-react';
+import { MenuCheckout } from '@/components/MenuCheckout';
+
+// ✅ REMOVIDO: import { TimeSlotSelector } from './TimeSlotSelector';
 
 interface TimeSlot {
   id: string;
@@ -19,14 +22,24 @@ const timeSlots: TimeSlot[] = [
 export function MenuSection() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [showSlots, setShowSlots] = useState(false);
+  const [cartItems, setCartItems] = useState<Array<{id: string, name: string, price: number, quantity: number}>>([]);
+  const [cartTotal, setCartTotal] = useState(0);
 
-  const handleOrder = () => {
-    setShowSlots(true);
+  const addToCart = (item: typeof mockMenu[0]) => {
+    setCartItems(prev => {
+      const existing = prev.find(i => i.id === item.id);
+      if (existing) {
+        return prev.map(i => i.id === item.id ? {...i, quantity: i.quantity + 1} : i);
+      }
+      return [...prev, {...item, quantity: 1}];
+    });
+    setCartTotal(prev => prev + item.preco);
   };
 
-  const handleSelectSlot = (slot: TimeSlot) => {
-    setSelectedSlot(slot);
-    setShowSlots(false);
+  const handleOrderSent = () => {
+    console.log('Pedido enviado!');
+    setCartItems([]);
+    setCartTotal(0);
   };
 
   return (
@@ -58,7 +71,7 @@ export function MenuSection() {
                     R$ {item.preco.toFixed(2)}
                   </span>
                   {item.disponivel ? (
-                    <Button onClick={handleOrder}>Pedir</Button>
+                    <Button onClick={() => addToCart(item)}>Pedir</Button>
                   ) : (
                     <Button variant="outline" disabled>
                       Indisponível
@@ -70,44 +83,30 @@ export function MenuSection() {
           ))}
         </div>
 
-        {showSlots && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-lg p-6 max-w-md w-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Escolha o Horário</h3>
-                <Button variant="ghost" size="icon" onClick={() => setShowSlots(false)}>
-                  ✕
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                {timeSlots.map((slot) => (
-                  <Button
-                    key={slot.id}
-                    variant={slot.available ? 'outline' : 'outline'}
-                    className={`w-full justify-between ${
-                      !slot.available ? 'opacity-50 cursor-not-allowed' : ''
-                    } ${selectedSlot?.id === slot.id ? 'bg-primary text-primary-foreground' : ''}`}
-                    onClick={() => slot.available && handleSelectSlot(slot)}
-                    disabled={!slot.available}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {slot.label}
-                    </span>
-                    {!slot.available && <span className="text-xs">Esgotado</span>}
-                  </Button>
-                ))}
-              </div>
-
-              {selectedSlot && (
-                <div className="mt-4 p-3 bg-muted rounded">
-                  <p className="text-sm">
-                    Horário selecionado: <strong>{selectedSlot.label}</strong>
-                  </p>
-                </div>
-              )}
-            </div>
+        {/* ✅ Checkout simplificado (sem TimeSlotSelector) */}
+        {cartItems.length > 0 && (
+          <div className="mt-12 p-6 bg-card rounded-lg border border-border max-w-md mx-auto">
+            <h3 className="text-xl font-bold mb-4 text-foreground">Seu Pedido</h3>
+            <ul className="space-y-2 mb-4">
+              {cartItems.map(item => (
+                <li key={item.id} className="flex justify-between text-sm">
+                  <span>{item.quantity}x {item.name}</span>
+                  <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-lg font-bold text-primary mb-4">
+              Total: R$ {cartTotal.toFixed(2)}
+            </p>
+            <MenuCheckout
+              cartItems={cartItems}
+              cartTotal={cartTotal}
+              onOrderSent={handleOrderSent}
+              onCartClear={() => {
+                setCartItems([]);
+                setCartTotal(0);
+              }}
+            />
           </div>
         )}
       </div>
