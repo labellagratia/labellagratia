@@ -1,8 +1,5 @@
 import type { MenuItem } from '@/types/menu';
 
-// Usa BASE_URL para funcionar em dev e produção
-const BASE_URL = import.meta.env.BASE_URL;
-
 export const mockMenu: MenuItem[] = [
   {
     id: 'feijoada_001',
@@ -12,7 +9,7 @@ export const mockMenu: MenuItem[] = [
     categoria: 'principal',
     disponivel: true,
     ordem: 1,
-    imagemUrl: `/cta_plate.jpg`,
+    imagemUrl: '/cta_plate.jpg', // Caminho absoluto simples
   },
 ];
 

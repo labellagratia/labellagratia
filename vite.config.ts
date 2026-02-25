@@ -6,8 +6,8 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   
-  // Raiz do domínio (sem subpasta)
-  base: '/',
+  // ⚠️ Para repositório "labellagratia" (não .github.io):
+  base: '/labellagratia/',
   
   resolve: {
     alias: {
