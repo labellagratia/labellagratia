@@ -29,6 +29,7 @@ export function Hero({ onViewMenu }: HeroProps) {
     if (!section || !bg || !headline || !subline || !cta || !microcopy) return;
 
     const ctx = gsap.context(() => {
+      // Load animation
       const loadTl = gsap.timeline({ defaults: { ease: 'power2.out' } });
 
       loadTl
@@ -42,6 +43,7 @@ export function Hero({ onViewMenu }: HeroProps) {
         .fromTo(subline, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }, '-=0.5')
         .fromTo([cta, microcopy], { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, '-=0.3');
 
+      // Scroll animation (exit only)
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
@@ -52,12 +54,16 @@ export function Hero({ onViewMenu }: HeroProps) {
           anticipatePin: 1,
           invalidateOnRefresh: true,
           onLeaveBack: () => {
+            // Reset to visible when scrolling back to top
             gsap.set([headline, subline, cta, microcopy], { opacity: 1, y: 0 });
             gsap.set(bg, { scale: 1, y: 0 });
           },
         },
       });
 
+      // ENTRANCE (0-30%): Hold visible (already entered via load)
+      // SETTLE (30-70%): Static
+      // EXIT (70-100%): Elements exit
       scrollTl
         .fromTo(
           contentRef.current,
@@ -73,48 +79,54 @@ export function Hero({ onViewMenu }: HeroProps) {
   }, []);
 
   return (
-    <section ref={sectionRef} id="hero" className="section-pinned z-10">
+    <section
+      ref={sectionRef}
+      id="hero"
+      className="section-pinned z-10"
+    >
       {/* Background Image */}
-      <div ref={bgRef} className="absolute inset-0 z-0" style={{ opacity: 0 }}>
-        {/* ✅ Caminho relativo simples: funciona em GitHub Pages project site */}
+      <div
+        ref={bgRef}
+        className="absolute inset-0 z-0"
+        style={{ opacity: 0 }}
+      >
         <img
-          src="./hero_kitchen.jpg"
+          src="/hero_kitchen.jpg"
           alt="Dark Kitchen"
           className="w-full h-full object-cover"
-          onError={(e) => {
-            // Fallback se a imagem não carregar
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.parentElement!.style.backgroundColor = '#1a1a2e';
-          }}
         />
         <div className="vignette" />
       </div>
 
       {/* Content */}
-      <div ref={contentRef} className="relative z-10 w-full h-full flex flex-col items-center justify-center">
-        
-        {/* ✅ Logo com caminho relativo */}
+      <div
+        ref={contentRef}
+        className="relative z-10 w-full h-full flex flex-col items-center justify-center"
+      >
+              
+        {/* ✅ INSIRA O LOGO AQUI */}
         <div className="w-full flex justify-center mb-8">
           <img
-            src="./log.png"
+            src="/log.png"
             alt="La Bella Grattia Logo"
             className="h-24 w-auto object-contain"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
           />
         </div>
         
         {/* Headline Block */}
         <div className="text-center px-6" style={{ maxWidth: '1100px' }}>
-          <h1 ref={headlineRef} className="text-[clamp(44px,6vw,84px)] font-black text-[#F4F6FA] tracking-[0.02em] mb-4">
+          <h1
+            ref={headlineRef}
+            className="text-[clamp(44px,6vw,84px)] font-black text-[#F4F6FA] tracking-[0.02em] mb-4"
+          >
             <span className="word inline-block">LA</span>{' '}
             <span className="word inline-block">BELLA</span>{' '}
             <span className="word inline-block">GRATIA</span>
           </h1>
-          <p ref={sublineRef} className="text-[clamp(16px,2vw,24px)] text-[#A7ACB8] font-light tracking-wide">
+          <p
+            ref={sublineRef}
+            className="text-[clamp(16px,2vw,24px)] text-[#A7ACB8] font-light tracking-wide"
+          >
             Saborosa Comida Caseira. Delivery de Sábado.
           </p>
         </div>
@@ -128,11 +140,7 @@ export function Hero({ onViewMenu }: HeroProps) {
           </div>
 
           <div ref={ctaRef}>
-            {/* ✅ Botão com classes Tailwind completas (fallback se btn-primary não existir) */}
-            <button 
-              onClick={onViewMenu} 
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#C9A227] text-white font-medium rounded-lg hover:bg-[#b08d1f] transition-colors shadow-md"
-            >
+            <button onClick={onViewMenu} className="btn-primary flex items-center gap-2">
               Ver o menu desta Semana
               <ChevronDown className="w-4 h-4" />
             </button>
