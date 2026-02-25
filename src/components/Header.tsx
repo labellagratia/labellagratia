@@ -2,6 +2,13 @@ import React from 'react';
 import { ShoppingCart, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 interface HeaderProps {
   cartItems: CartItem[];
   cartTotal: number;
@@ -10,13 +17,6 @@ interface HeaderProps {
   onRemoveItem: (dishId: string) => void;
   onCheckout: () => void;
   onOpenGallery?: () => void;
-}
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
 }
 
 export function Header({
