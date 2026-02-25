@@ -1,3 +1,4 @@
+// src/data/mockMenu.ts
 import type { MenuItem } from '@/types/menu';
 
 export const mockMenu: MenuItem[] = [
@@ -9,7 +10,8 @@ export const mockMenu: MenuItem[] = [
     categoria: 'principal',
     disponivel: true,
     ordem: 1,
-    imagemUrl: '/cta_plate.jpg', // Caminho absoluto simples
+    // ✅ Usa BASE_URL para funcionar em dev e produção
+    imagemUrl: `${import.meta.env.BASE_URL}cta_plate.jpg`,
   },
 ];
 
