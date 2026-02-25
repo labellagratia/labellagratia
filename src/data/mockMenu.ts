@@ -1,9 +1,8 @@
-// src/data/mockMenu.ts
-import { MenuItem } from '@/types/menu';
+import type { MenuItem } from '@/types/menu';
 
-/**
- * Lista de itens do cardápio para desenvolvimento (sem Firebase)
- */
+// Usa BASE_URL para funcionar em dev e produção
+const BASE_URL = import.meta.env.BASE_URL;
+
 export const mockMenu: MenuItem[] = [
   {
     id: 'feijoada_001',
@@ -13,24 +12,10 @@ export const mockMenu: MenuItem[] = [
     categoria: 'principal',
     disponivel: true,
     ordem: 1,
-    imagemUrl: '/cta_plate.jpg', // Usando uma imagem que já está na pasta public/
+    imagemUrl: `/cta_plate.jpg`,
   },
-  // Exemplos para o futuro (comentados até ela expandir o cardápio)
-  // {
-  //   id: 'agua_500ml',
-  //   nome: 'Água Mineral 500ml',
-  //   descricao: 'Sem gás',
-  //   preco: 5.00,
-  //   categoria: 'bebida',
-  //   disponivel: false,
-  //   ordem: 2,
-  // },
 ];
 
-/**
- * Simula uma chamada assíncrona ao "banco de dados"
- * Retorna apenas itens disponíveis por padrão
- */
 export const fetchMenuMock = async (apenasDisponiveis: boolean = true): Promise<MenuItem[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -38,6 +23,6 @@ export const fetchMenuMock = async (apenasDisponiveis: boolean = true): Promise<
         ? mockMenu.filter(item => item.disponivel) 
         : mockMenu;
       resolve(resultado);
-    }, 300); // Simula delay de rede
+    }, 300);
   });
 };

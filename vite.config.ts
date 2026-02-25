@@ -6,19 +6,17 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   
-  // Configuração para GitHub Pages
-  base: '/app/', // ← Nome do seu repositório no GitHub
+  // Raiz do domínio (sem subpasta)
+  base: '/',
   
-  // Configuração de resolução de caminhos (alias @)
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
   
-  // Configuração do servidor de desenvolvimento
   server: {
-    host: '0.0.0.0', // ✅ Permite acesso externo na rede local
+    host: '0.0.0.0',
     port: 5173,
     strictPort: true,
   },
