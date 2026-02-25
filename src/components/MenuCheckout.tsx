@@ -37,9 +37,7 @@ export function MenuCheckout({
 
   const handleFinalizar = () => {
     if (cartItems.length === 0) return;
-
     const existing = CustomerManager.get();
-    
     if (!existing || !CustomerManager.isReturning()) {
       setShowCustomerForm(true);
     } else {
@@ -51,11 +49,11 @@ export function MenuCheckout({
 
   const enviarPedido = (data: CustomerData) => {
     setIsSubmitting(true);
-    
     try {
       CustomerManager.save(data);
       const orderNumber = generateOrderNumber();
       
+      // ✅ Correção: Removido parâmetro timeSlot
       sendOrderToWhatsApp(
         orderNumber,
         cartItems,
@@ -114,7 +112,6 @@ export function MenuCheckout({
                 disabled={CustomerManager.isReturning()}
               />
             </div>
-            
             <div className="space-y-2">
               <label className="text-sm text-[#A7ACB8]">WhatsApp (com DDD) *</label>
               <input
@@ -126,7 +123,6 @@ export function MenuCheckout({
                 disabled={CustomerManager.isReturning()}
               />
             </div>
-            
             <div className="space-y-2">
               <label className="text-sm text-[#A7ACB8]">Endereço de Entrega *</label>
               <textarea
@@ -137,7 +133,6 @@ export function MenuCheckout({
                 disabled={CustomerManager.isReturning()}
               />
             </div>
-            
             <div className="pt-4 border-t border-[#2A2A35]">
               <p className="text-sm text-[#A7ACB8] mb-2">Resumo do Pedido:</p>
               <ul className="text-sm text-[#F4F6FA] space-y-1 max-h-32 overflow-y-auto">

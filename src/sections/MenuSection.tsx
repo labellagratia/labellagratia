@@ -1,37 +1,27 @@
 import { useState } from 'react';
 import { mockMenu } from '@/data/mockMenu';
 import { Button } from '@/components/ui/button';
-import { Clock } from 'lucide-react';
 import { MenuCheckout } from '@/components/MenuCheckout';
-
-// ✅ REMOVIDO: import { TimeSlotSelector } from './TimeSlotSelector';
-
-interface TimeSlot {
-  id: string;
-  label: string;
-  available: boolean;
-}
-
-const timeSlots: TimeSlot[] = [
-  { id: '1', label: '18:00 - 19:00', available: true },
-  { id: '2', label: '19:00 - 20:00', available: true },
-  { id: '3', label: '20:00 - 21:00', available: false },
-  { id: '4', label: '21:00 - 22:00', available: true },
-];
+import type { MenuItem } from '@/types/menu';
+import type { CartItem } from '@/types';
 
 export function MenuSection() {
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  const [showSlots, setShowSlots] = useState(false);
-  const [cartItems, setCartItems] = useState<Array<{id: string, name: string, price: number, quantity: number}>>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartTotal, setCartTotal] = useState(0);
 
-  const addToCart = (item: typeof mockMenu[0]) => {
+  const addToCart = (item: MenuItem) => {
     setCartItems(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
         return prev.map(i => i.id === item.id ? {...i, quantity: i.quantity + 1} : i);
       }
-      return [...prev, {...item, quantity: 1}];
+      // ✅ Correção: Mapear MenuItem para CartItem
+      return [...prev, {
+        id: item.id,
+        name: item.nome,
+        price: item.preco,
+        quantity: 1
+      }];
     });
     setCartTotal(prev => prev + item.preco);
   };
@@ -83,7 +73,6 @@ export function MenuSection() {
           ))}
         </div>
 
-        {/* ✅ Checkout simplificado (sem TimeSlotSelector) */}
         {cartItems.length > 0 && (
           <div className="mt-12 p-6 bg-card rounded-lg border border-border max-w-md mx-auto">
             <h3 className="text-xl font-bold mb-4 text-foreground">Seu Pedido</h3>
