@@ -1,6 +1,11 @@
 // src/data/mockMenu.ts
 import type { MenuItem } from '@/types/menu';
 
+// ✅ Importe as imagens
+import feijoadaImg from '@/assets/cta_plate.jpg';
+// import lasanhaImg from '@/assets/dishes/lasanha.jpg';
+// import frangoImg from '@/assets/dishes/frango-pardo.jpg';
+
 export const mockMenu: MenuItem[] = [
   {
     id: 'feijoada_001',
@@ -10,9 +15,15 @@ export const mockMenu: MenuItem[] = [
     categoria: 'principal',
     disponivel: true,
     ordem: 1,
-    // ✅ Usa BASE_URL para funcionar em dev e produção
-    imagemUrl: `${import.meta.env.BASE_URL}cta_plate.jpg`,
+    // ✅ Use a variável importada (não precisa de BASE_URL!)
+    imagemUrl: feijoadaImg,
   },
+  // {
+  //   id: 'lasanha_001',
+  //   nome: 'Lasanha',
+  //   // ...
+  //   imagemUrl: lasanhaImg,
+  // },
 ];
 
 export const fetchMenuMock = async (apenasDisponiveis: boolean = true): Promise<MenuItem[]> => {
