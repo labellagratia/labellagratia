@@ -1,163 +1,116 @@
-// components/MenuCheckout.tsx (novo componente unificado)
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { TimeSlotSelector } from './TimeSlotSelector';
-import { CustomerManager } from '@/utils/customerManager';
-import { generateOrderNumber, sendOrderToWhatsApp } from '@/utils/whatsappOrder';
-import type { CartItem, CustomerData } from '@/types';
+import { useState } from 'react';
+import { mockMenu } from '@/data/mockMenu';
+import { Button } from '@/components/ui/button';
+import { Clock } from 'lucide-react';  // ✅ Removido Calendar
 
-interface MenuCheckoutProps {
-  cartItems: CartItem[];
-  cartTotal: number;
-  onOrderSent?: () => void;
+interface TimeSlot {
+  id: string;
+  label: string;
+  available: boolean;
 }
 
-export function MenuCheckout({ cartItems, cartTotal, onOrderSent }: MenuCheckoutProps) {
-  const [timeSlot, setTimeSlot] = useState<string>('');
-  const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [customerData, setCustomerData] = useState<CustomerData>({
-    name: '',
-    phone: '',
-    address: ''
-  });
+const timeSlots: TimeSlot[] = [
+  { id: '1', label: '18:00 - 19:00', available: true },
+  { id: '2', label: '19:00 - 20:00', available: true },
+  { id: '3', label: '20:00 - 21:00', available: false },
+  { id: '4', label: '21:00 - 22:00', available: true },
+];
 
-  // Verifica se é cliente retornando ao montar
-  useEffect(() => {
-    if (CustomerManager.isReturning()) {
-      const saved = CustomerManager.get();
-      if (saved) {
-        setCustomerData(saved);
-        // Opcional: abrir modal de revisão direto
-        // setShowReview(true);
-      }
-    }
-  }, []);
+export function MenuSection() {
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [showSlots, setShowSlots] = useState(false);
 
-  const handleFinalizar = () => {
-    if (!timeSlot) {
-      alert('Por favor, selecione um horário de entrega.');
-      return;
-    }
-
-    const existing = CustomerManager.get();
-    
-    if (!existing || !CustomerManager.isReturning()) {
-      // Novo cliente: mostra popup de cadastro
-      setShowCustomerForm(true);
-    } else {
-      // Cliente conhecido: envia direto
-      enviarPedido(customerData);
-    }
+  const handleOrder = () => {
+    setShowSlots(true);
   };
 
-  const enviarPedido = (data: CustomerData) => {
-    // Salva dados do cliente
-    CustomerManager.save(data);
-    
-    // Gera número do pedido
-    const orderNumber = generateOrderNumber();
-    
-    // Envia para WhatsApp
-    sendOrderToWhatsApp(
-      orderNumber,
-      cartItems,
-      cartTotal,
-      timeSlot,
-      data,
-      () => {
-        // Opcional: limpar carrinho após envio
-        // onCartClear?.();
-        onOrderSent?.();
-      }
-    );
+  const handleSelectSlot = (slot: TimeSlot) => {
+    setSelectedSlot(slot);
+    setShowSlots(false);
   };
 
   return (
-    <>
-      {/* Botão de finalizar no Menu */}
-      <button
-        onClick={handleFinalizar}
-        disabled={cartItems.length === 0}
-        className="btn-primary w-full disabled:opacity-50"
-      >
-        {cartItems.length === 0 ? 'Adicione itens ao carrinho' : 'Finalizar Pedido'}
-      </button>
+    <section id="menu" className="py-20 bg-background">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-bold text-center mb-4">Cardápio da Semana</h2>
+        <p className="text-center text-muted-foreground mb-12">
+          Pedidos de segunda a sexta. Retirada aos sábados.
+        </p>
 
-      {/* Modal de Cadastro (Novos Clientes) */}
-      <Dialog open={showCustomerForm} onOpenChange={setShowCustomerForm}>
-        <DialogContent className="bg-[#141419] border border-[#7B2CFF]/30 max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-[#F4F6FA]">
-              📋 Seus Dados para Entrega
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm text-[#A7ACB8]">Nome Completo</label>
-              <input
-                type="text"
-                className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] focus:border-[#7B2CFF] outline-none"
-                value={customerData.name}
-                onChange={(e) => setCustomerData({...customerData, name: e.target.value})}
-                placeholder="Ex: Andrôn Varrôn"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm text-[#A7ACB8]">WhatsApp (com DDD)</label>
-              <input
-                type="tel"
-                className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] focus:border-[#7B2CFF] outline-none"
-                value={customerData.phone}
-                onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
-                placeholder="Ex: 11999999999"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm text-[#A7ACB8]">Endereço de Entrega</label>
-              <textarea
-                className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] focus:border-[#7B2CFF] outline-none h-24 resize-none"
-                value={customerData.address}
-                onChange={(e) => setCustomerData({...customerData, address: e.target.value})}
-                placeholder="Rua, número, bairro, complemento..."
-              />
-            </div>
-            
-            <button
-              onClick={() => enviarPedido(customerData)}
-              disabled={!customerData.name || !customerData.phone || !customerData.address}
-              className="w-full btn-primary mt-2 disabled:opacity-50"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {mockMenu.map((item) => (
+            <div
+              key={item.id}
+              className="bg-card rounded-lg shadow-lg overflow-hidden border border-border"
             >
-              Enviar Pedido no WhatsApp 🚀
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Seleção de Horário (pode ser inline no menu também) */}
-      {!timeSlot && cartItems.length > 0 && (
-        <Dialog open={!showCustomerForm} onOpenChange={() => {}}>
-          <DialogContent className="bg-[#141419] border border-[#7B2CFF]/30">
-            <DialogHeader>
-              <DialogTitle className="text-[#F4F6FA]">
-                ⏰ Escolha o Horário
-              </DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <TimeSlotSelector 
-                selected={timeSlot} 
-                onSelect={(slot) => {
-                  setTimeSlot(slot);
-                  // Após selecionar, prossegue para finalizar
-                  setTimeout(handleFinalizar, 300);
-                }} 
-              />
+              {item.imagemUrl && (
+                <img
+                  src={item.imagemUrl}
+                  alt={item.nome}
+                  className="w-full h-48 object-cover"
+                />
+              )}
+              <div className="p-6">
+                <h3 className="text-xl font-bold mb-2">{item.nome}</h3>
+                <p className="text-muted-foreground mb-4">{item.descricao}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-2xl font-bold text-primary">
+                    R$ {item.preco.toFixed(2)}
+                  </span>
+                  {item.disponivel ? (
+                    <Button onClick={handleOrder}>Pedir</Button>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      Indisponível
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
+          ))}
+        </div>
+
+        {showSlots && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-lg p-6 max-w-md w-full">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold">Escolha o Horário</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowSlots(false)}>
+                  ✕
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {timeSlots.map((slot) => (
+                  <Button
+                    key={slot.id}
+                    variant={slot.available ? 'outline' : 'outline'}
+                    className={`w-full justify-between ${
+                      !slot.available ? 'opacity-50 cursor-not-allowed' : ''
+                    } ${selectedSlot?.id === slot.id ? 'bg-primary text-primary-foreground' : ''}`}
+                    onClick={() => slot.available && handleSelectSlot(slot)}
+                    disabled={!slot.available}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {slot.label}
+                    </span>
+                    {!slot.available && <span className="text-xs">Esgotado</span>}
+                  </Button>
+                ))}
+              </div>
+
+              {selectedSlot && (
+                <div className="mt-4 p-3 bg-muted rounded">
+                  <p className="text-sm">
+                    Horário selecionado: <strong>{selectedSlot.label}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
