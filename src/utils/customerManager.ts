@@ -1,33 +1,36 @@
-// utils/customerManager.ts
+// src/utils/customerManager.ts
 import type { CustomerData } from '@/types';
 
-const STORAGE_KEY = 'labella_customer';
+const STORAGE_KEY = '@labellagratia:customer';
+
+const isComplete = (data: Partial<CustomerData>): boolean => {
+  return !!(data.name?.trim() && data.phone?.trim() && data.address?.trim());
+};
 
 export const CustomerManager = {
-  get(): CustomerData | null {
+  save: (data: CustomerData) => {
+    if (isComplete(data)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return true;
+    }
+    return false;
+  },
+
+  get: (): CustomerData | null => {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : null;
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw) as CustomerData;
+      return isComplete(data) ? data : null;
     } catch {
       return null;
     }
   },
 
-  save(data: CustomerData): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      ...data,
-      lastOrder: new Date().toISOString()
-    }));
-  },
+  isReturning: (): boolean => CustomerManager.get() !== null,
 
-  isReturning(): boolean {
-    const customer = this.get();
-    if (!customer?.lastOrder) return false;
-    
-    // Considera "retornando" se pediu nos últimos 30 dias
-    const last = new Date(customer.lastOrder);
-    const now = new Date();
-    const diffDays = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays <= 30;
-  }
+  // ✅ ADICIONAR ESTE MÉTODO:
+  clear: () => {
+    localStorage.removeItem(STORAGE_KEY);
+  },
 };

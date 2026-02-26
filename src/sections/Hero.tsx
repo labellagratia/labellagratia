@@ -115,7 +115,7 @@ export function Hero({ onViewMenu }: HeroProps) {
         <div className="w-full flex justify-center mb-8">
           <img
             src={logoImg}
-            alt="La Bella Grattia Logo"
+            alt="La Bella Gratia Logo"
             className="h-24 w-auto object-contain"
             onError={(e) => {
               console.error('Erro ao carregar log.png');

@@ -40,7 +40,7 @@ export function sendOrderToWhatsApp(
 
   // Mensagem de cópia para o cliente (SEM horário)
   let msgClient = `*✅ Pedido #${orderNumber} Confirmado!*\n`;
-  msgClient += `*La Bella Grattia*\n\n`;
+  msgClient += `*La Bella Gratia*\n\n`;
   msgClient += `*📍 Entrega:* ${customer.address}\n\n`;
   msgClient += `*Resumo:*\n`;
   items.forEach(item => {
