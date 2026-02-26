@@ -1,3 +1,4 @@
+// src/sections/MenuSection.tsx
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -6,11 +7,32 @@ import { Button } from '@/components/ui/button';
 import { CustomerManager } from '@/utils/customerManager';
 import { generateOrderNumber } from '@/utils/whatsappOrder';
 import type { CartItem } from '@/types';
-import type { Dish } from '@/types';
-import { ChevronLeft, ChevronRight, CheckCircle2, ArrowRight, X } from 'lucide-react';
+import type { MenuCategory } from '@/types/menu';
+import { CATEGORIAS } from '@/types/menu';
+import { getItemsByCategory } from '@/data/menu';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  CheckCircle2, 
+  ArrowRight, 
+  X,
+  UtensilsCrossed,
+  Salad,
+  GlassWater,
+  IceCream,
+  ShoppingBag
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Mapeamento de ícones por categoria
+const CATEGORY_ICONS = {
+  principal: UtensilsCrossed,
+  acompanhamento: Salad,
+  bebida: GlassWater,
+  sobremesa: IceCream,
+};
 
 const PIX_CONFIG = {
   pixKey: '14838734808',
@@ -29,11 +51,10 @@ const DELIVERY_SLOTS: Record<DeliveryHour, string[]> = {
 };
 
 interface MenuSectionProps {
-  dishes: Dish[];
-  onAddToCart: (dish: Dish) => void;
   isOrderingOpen: boolean;
 }
 
+// Funções PIX mantidas iguais...
 function generatePixCode(params: {
   pixKey: string;
   amount: number;
@@ -73,11 +94,19 @@ function calculateCRC16(str: string): string {
   return crc.toString(16).toUpperCase().padStart(4, '0');
 }
 
-export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSectionProps) {
+export function MenuSection({ isOrderingOpen }: MenuSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
+  // Estados das abas e navegação
+  const [activeCategory, setActiveCategory] = useState<MenuCategory>('principal');
   const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Dados filtrados pela categoria atual
+  const items = getItemsByCategory(activeCategory);
+  const currentItem = items[currentIndex] || items[0];
+  
+  // Estados do carrinho e checkout
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
   const [customerData, setCustomerData] = useState({ name: '', phone: '', address: '' });
@@ -88,11 +117,15 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
   const [paymentStep, setPaymentStep] = useState<'form' | 'pix' | 'confirmation'>('form');
 
   const savedCustomer = CustomerManager.get();
-  const currentDish = dishes[currentIndex] || dishes[0];
   const total = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const itemCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  // GSAP - animação suave de entrada
+  // Resetar índice quando muda de categoria
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [activeCategory]);
+
+  // GSAP animations...
   useEffect(() => {
     const section = sectionRef.current;
     const content = contentRef.current;
@@ -114,57 +147,102 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
   }, []);
 
   useEffect(() => {
-    if (savedCustomer) setCustomerData({ name: savedCustomer.name || '', phone: savedCustomer.phone || '', address: savedCustomer.address || '' });
+    if (savedCustomer) setCustomerData({ 
+      name: savedCustomer.name || '', 
+      phone: savedCustomer.phone || '', 
+      address: savedCustomer.address || '' 
+    });
   }, []);
 
   useEffect(() => {
     if (!showCheckout) {
-      setPaymentStep('form'); setPixCode(null); setOrderId(''); setSelectedHour(null); setSelectedSlot(null);
+      setPaymentStep('form'); 
+      setPixCode(null); 
+      setOrderId(''); 
+      setSelectedHour(null); 
+      setSelectedSlot(null);
     }
   }, [showCheckout]);
 
   const addToCart = () => {
-    if (!isOrderingOpen || !currentDish) { toast.error('Pedidos encerrados'); return; }
+    if (!isOrderingOpen || !currentItem) { 
+      toast.error('Pedidos encerrados'); 
+      return; 
+    }
     setCartItems(prev => {
-      const existing = prev.find(i => i.id === currentDish.id);
-      if (existing) return prev.map(i => i.id === currentDish.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { id: currentDish.id, name: currentDish.name, price: currentDish.price, quantity: 1 }];
+      const existing = prev.find(i => i.id === currentItem.id);
+      if (existing) return prev.map(i => 
+        i.id === currentItem.id ? { ...i, quantity: i.quantity + 1 } : i
+      );
+      return [...prev, { 
+        id: currentItem.id, 
+        name: currentItem.nome, 
+        price: currentItem.preco, 
+        quantity: 1 
+      }];
     });
-    onAddToCart?.(currentDish);
+    toast.success(`${currentItem.nome} adicionado!`);
   };
 
-  const updateQty = (delta: number) => {
-    const item = cartItems.find(i => i.id === currentDish?.id);
+  const updateQty = (itemId: string, delta: number) => {
+    const item = cartItems.find(i => i.id === itemId);
     if (!item) return;
     const newQty = item.quantity + delta;
-    if (newQty <= 0) setCartItems(prev => prev.filter(i => i.id !== currentDish.id));
-    else setCartItems(prev => prev.map(i => i.id === currentDish.id ? { ...i, quantity: newQty } : i));
+    if (newQty <= 0) {
+      setCartItems(prev => prev.filter(i => i.id !== itemId));
+    } else {
+      setCartItems(prev => prev.map(i => 
+        i.id === itemId ? { ...i, quantity: newQty } : i
+      ));
+    }
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCartItems(prev => prev.filter(i => i.id !== itemId));
   };
 
   const generatePix = () => {
     if (!customerData.name.trim() || !customerData.phone.trim() || !selectedSlot) {
-      toast.error('Preencha dados e horário'); return;
+      toast.error('Preencha dados e horário'); 
+      return;
     }
-    if (total <= 0) { toast.error('Carrinho vazio'); return; }
+    if (total <= 0) { 
+      toast.error('Carrinho vazio'); 
+      return;
+    }
     
     try {
       const newOrderId = generateOrderNumber();
       setOrderId(newOrderId);
       const code = generatePixCode({
-        pixKey: PIX_CONFIG.pixKey, amount: total, description: `Pedido #${newOrderId}`,
-        merchantName: PIX_CONFIG.merchantName, merchantCity: PIX_CONFIG.merchantCity, txid: newOrderId.substring(0, 25),
+        pixKey: PIX_CONFIG.pixKey, 
+        amount: total, 
+        description: `Pedido #${newOrderId}`,
+        merchantName: PIX_CONFIG.merchantName, 
+        merchantCity: PIX_CONFIG.merchantCity, 
+        txid: newOrderId.substring(0, 25),
       });
-      setPixCode(code); setPaymentStep('pix');
+      setPixCode(code); 
+      setPaymentStep('pix');
       CustomerManager.save(customerData);
       toast.success('PIX gerado! Copie e pague.', { duration: 6000 });
-    } catch (error) { toast.error('Erro ao gerar PIX'); }
+    } catch (error) { 
+      toast.error('Erro ao gerar PIX'); 
+    }
   };
 
   const copyPix = async () => {
     if (!pixCode) return;
-    try { await navigator.clipboard.writeText(pixCode); toast.success('Copiado!'); }
-    catch { 
-      const t = document.createElement('textarea'); t.value = pixCode; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); 
+    try { 
+      await navigator.clipboard.writeText(pixCode); 
+      toast.success('Copiado!'); 
+    } catch { 
+      const t = document.createElement('textarea'); 
+      t.value = pixCode; 
+      document.body.appendChild(t); 
+      t.select(); 
+      document.execCommand('copy'); 
+      document.body.removeChild(t); 
       toast.success('Copiado!');
     }
   };
@@ -177,79 +255,173 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
     window.open(`https://wa.me/5511945925632?text=${msg}`, '_blank');
     setPaymentStep('confirmation');
     toast.success('Pedido enviado!', { duration: 8000 });
-    setTimeout(() => { setShowCheckout(false); setCartItems([]); setPaymentStep('form'); setPixCode(null); }, 3000);
+    setTimeout(() => { 
+      setShowCheckout(false); 
+      setCartItems([]); 
+      setPaymentStep('form'); 
+      setPixCode(null); 
+    }, 3000);
   };
 
-  if (!currentDish) return null;
+  // Se não houver itens na categoria
+  if (!currentItem) {
+    return (
+      <section ref={sectionRef} id="menu" className="relative z-[70] bg-[#0B0B10] min-h-screen py-12">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-[#A7ACB8]">Nenhum item disponível nesta categoria.</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <>
       <section ref={sectionRef} id="menu" className="relative z-[70] bg-[#0B0B10] min-h-screen py-12 lg:py-0">
-        {/* Background - apenas desktop */}
-        <div className="hidden lg:block absolute inset-0 bg-[url('/blackphoto.JPG')] bg-cover bg-center bg-fixed opacity-30" />
-        <div className="hidden lg:block absolute inset-0 bg-[#0B0B10]/80" />
+        {/* Background */}
+        <div className="hidden lg:block absolute inset-0 bg-[url('/backdrop.jpg')] bg-cover bg-center bg-fixed" />
+        <div className="hidden lg:block absolute inset-0 bg-[#0B0B10]/10" />
         
         <div ref={contentRef} className="relative z-10 max-w-7xl mx-auto px-4 lg:px-8 h-full">
-          {/* Layout: Mobile = empilhado, Desktop = lado a lado */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:h-screen lg:py-20 gap-8 lg:gap-12">
+          
+          {/* ABAS DE CATEGORIA */}
+          <div className="flex justify-center mb-8 pt-4 lg:pt-10">
+            <div className="inline-flex flex-wrap justify-center gap-2 p-2 bg-[#141419]/80 backdrop-blur-sm rounded-2xl border border-[rgba(244,246,250,0.1)]">
+              {CATEGORIAS.map((cat) => {
+                const Icon = CATEGORY_ICONS[cat.id];
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`px-4 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
+                      activeCategory === cat.id
+                        ? 'bg-[#7B2CFF] text-[#0B0B10]'
+                        : 'text-[#A7ACB8] hover:text-[#F4F6FA] hover:bg-[#2A2A35]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Layout principal */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:h-[calc(100vh-140px)] gap-8 lg:gap-12">
             
             {/* COLUNA ESQUERDA: Info + Carrinho */}
             <div className="w-full lg:w-[45%] order-2 lg:order-1">
-              {/* Chip */}
-              <div className="flex lg:absolute lg:top-10 lg:left-1/2 lg:-translate-x-1/2 mb-4 lg:mb-0">
-                <span className="inline-flex items-center gap-2 bg-[#141419] border border-[#7B2CFF]/30 text-[#7B2CFF] font-mono text-xs font-bold px-4 py-2 rounded-full uppercase">
-                  {isOrderingOpen ? '🍽️ Cardápio' : '🔴 Encerrado'}
-                </span>
-              </div>
-
               <div className="bg-[#141419]/90 lg:bg-transparent backdrop-blur-sm lg:backdrop-blur-none rounded-2xl lg:rounded-none p-6 lg:p-0 border border-[#2A2A35] lg:border-0">
-                {/* Navegação */}
+                
+                {/* Badge de categoria */}
+                <div className="mb-4">
+                  <span className="inline-flex items-center gap-2 bg-[#7B2CFF]/10 border border-[#7B2CFF]/30 text-[#7B2CFF] text-xs font-bold px-3 py-1.5 rounded-full uppercase">
+                    {CATEGORIAS.find(c => c.id === activeCategory)?.label}
+                  </span>
+                </div>
+
+                {/* Navegação entre itens da categoria */}
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-[#A7ACB8] text-xs font-bold uppercase tracking-wider">
-                    {currentIndex + 1} / {dishes.length}
+                    {currentIndex + 1} / {items.length}
                   </span>
                   <div className="flex gap-2">
-                    <button onClick={() => setCurrentIndex((p) => (p - 1 + dishes.length) % dishes.length)} className="w-10 h-10 rounded-full bg-[#2A2A35] text-[#F4F6FA] hover:bg-[#7B2CFF] transition-all flex items-center justify-center">
+                    <button 
+                      onClick={() => setCurrentIndex((p) => (p - 1 + items.length) % items.length)} 
+                      disabled={items.length <= 1}
+                      className="w-10 h-10 rounded-full bg-[#2A2A35] text-[#F4F6FA] hover:bg-[#7B2CFF] transition-all flex items-center justify-center disabled:opacity-30"
+                    >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <button onClick={() => setCurrentIndex((p) => (p + 1) % dishes.length)} className="w-10 h-10 rounded-full bg-[#2A2A35] text-[#F4F6FA] hover:bg-[#7B2CFF] transition-all flex items-center justify-center">
+                    <button 
+                      onClick={() => setCurrentIndex((p) => (p + 1) % items.length)} 
+                      disabled={items.length <= 1}
+                      className="w-10 h-10 rounded-full bg-[#2A2A35] text-[#F4F6FA] hover:bg-[#7B2CFF] transition-all flex items-center justify-center disabled:opacity-30"
+                    >
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
 
-                <h2 className="text-3xl lg:text-[clamp(32px,3vw,48px)] font-bold text-[#F4F6FA] mb-4 leading-tight">{currentDish.name}</h2>
-                <p className="text-[#A7ACB8] leading-relaxed mb-6 text-sm lg:text-base max-w-md">{currentDish.description}</p>
+                <h2 className="text-3xl lg:text-[clamp(32px,3vw,48px)] font-bold text-[#F4F6FA] mb-4 leading-tight">
+                  {currentItem.nome}
+                </h2>
+                <p className="text-[#A7ACB8] leading-relaxed mb-6 text-sm lg:text-base max-w-md">
+                  {currentItem.descricao}
+                </p>
+                
+                {/* Tags */}
+                {currentItem.tags && currentItem.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {currentItem.tags.map(tag => (
+                      <span key={tag} className="text-[10px] uppercase tracking-wider bg-[#2A2A35] text-[#A7ACB8] px-2 py-1 rounded">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 
                 <div className="flex items-center gap-4 mb-8">
-                  <span className="text-3xl font-bold text-[#7B2CFF]">R$ {currentDish.price.toFixed(2)}</span>
-                  <span className={`text-sm ${currentDish.available ? 'text-green-400' : 'text-red-400'}`}>
-                    {currentDish.available ? '✓ Disponível' : '✗ Esgotado'}
+                  <span className="text-3xl font-bold text-[#7B2CFF]">
+                    R$ {currentItem.preco.toFixed(2)}
+                  </span>
+                  <span className={`text-sm ${currentItem.disponivel ? 'text-green-400' : 'text-red-400'}`}>
+                    {currentItem.disponivel ? '✓ Disponível' : '✗ Esgotado'}
                   </span>
                 </div>
 
                 {/* Carrinho */}
                 <div className="space-y-4">
-                  {cartItems.find(i => i.id === currentDish.id) ? (
+                  {cartItems.find(i => i.id === currentItem.id) ? (
                     <div className="flex items-center gap-3">
-                      <button onClick={() => updateQty(-1)} className="w-12 h-12 rounded-xl bg-[#2A2A35] text-[#F4F6FA] text-xl hover:bg-[#3A3A45] transition-colors">−</button>
-                      <span className="w-16 text-center text-[#F4F6FA] text-xl font-bold">{cartItems.find(i => i.id === currentDish.id)?.quantity || 0}</span>
-                      <button onClick={addToCart} className="w-12 h-12 rounded-xl bg-[#7B2CFF] text-[#0B0B10] text-xl font-bold hover:bg-[#9B4CFF] transition-colors">+</button>
+                      <button 
+                        onClick={() => updateQty(currentItem.id, -1)} 
+                        className="w-12 h-12 rounded-xl bg-[#2A2A35] text-[#F4F6FA] text-xl hover:bg-[#3A3A45] transition-colors"
+                      >
+                        −
+                      </button>
+                      <span className="w-16 text-center text-[#F4F6FA] text-xl font-bold">
+                        {cartItems.find(i => i.id === currentItem.id)?.quantity || 0}
+                      </span>
+                      <button 
+                        onClick={addToCart} 
+                        className="w-12 h-12 rounded-xl bg-[#7B2CFF] text-[#0B0B10] text-xl font-bold hover:bg-[#9B4CFF] transition-colors"
+                      >
+                        +
+                      </button>
                     </div>
                   ) : (
-                    <Button onClick={addToCart} disabled={!currentDish.available || !isOrderingOpen} className="w-full lg:w-auto btn-primary px-8 disabled:opacity-50">
-                      {isOrderingOpen && currentDish.available ? 'Adicionar' : isOrderingOpen ? 'Esgotado' : 'Encerrado'}
+                    <Button 
+                      onClick={addToCart} 
+                      disabled={!currentItem.disponivel || !isOrderingOpen} 
+                      className="w-full lg:w-auto btn-primary px-8 disabled:opacity-50"
+                    >
+                      {isOrderingOpen && currentItem.disponivel ? 'Adicionar' : isOrderingOpen ? 'Esgotado' : 'Encerrado'}
                     </Button>
                   )}
 
+                  {/* Resumo do carrinho */}
                   {itemCount > 0 && (
                     <div className="pt-4 border-t border-[rgba(244,246,250,0.1)]">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[#A7ACB8] text-sm">{itemCount} item(s) no carrinho</span>
+                        <button 
+                          onClick={() => setShowCheckout(true)}
+                          className="text-[#7B2CFF] text-sm hover:underline"
+                        >
+                          Ver carrinho
+                        </button>
+                      </div>
                       <div className="flex justify-between items-center mb-4">
-                        <span className="text-[#A7ACB8]">{itemCount} item(s)</span>
+                        <span className="text-[#F4F6FA] font-semibold">Total</span>
                         <span className="text-[#7B2CFF] font-bold text-2xl">R$ {total.toFixed(2)}</span>
                       </div>
-                      <Button onClick={() => setShowCheckout(true)} className="w-full btn-primary text-lg py-6">
-                        Finalizar Pedido 🚀
+                      <Button 
+                        onClick={() => setShowCheckout(true)} 
+                        className="w-full btn-primary text-lg py-6 flex items-center justify-center gap-2"
+                      >
+                        <ShoppingBag className="w-5 h-5" />
+                        Finalizar Pedido
                       </Button>
                     </div>
                   )}
@@ -263,30 +435,46 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
 
             {/* COLUNA DIREITA: Imagem */}
             <div className="w-full lg:w-[50%] order-1 lg:order-2">
-              <div className="relative aspect-[4/3] lg:aspect-[4/5] lg:h-[70vh] rounded-2xl lg:rounded-[28px] overflow-hidden shadow-2xl">
-                <img src={currentDish.image || '/cta_plate.jpg'} alt={currentDish.name} className="w-full h-full object-cover" />
+              <div className="relative aspect-[4/3] lg:aspect-[4/5] lg:h-[70vh] rounded-2xl lg:rounded-[28px] overflow-hidden shadow-2xl border border-[#2A2A35]">
+                <img 
+                  src={currentItem.imagemUrl || '/cta_plate.jpg'} 
+                  alt={currentItem.nome} 
+                  className="w-full h-full object-cover"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B10]/40 to-transparent lg:hidden" />
                 
-                {/* Indicadores - mobile na imagem, desktop abaixo */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 lg:hidden">
-                  {dishes.map((_, idx) => (
-                    <button key={idx} onClick={() => setCurrentIndex(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-[#7B2CFF] w-6' : 'bg-white/50'}`} />
-                  ))}
-                </div>
+                {/* Indicadores de navegação */}
+                {items.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 lg:hidden">
+                    {items.map((_, idx) => (
+                      <button 
+                        key={idx} 
+                        onClick={() => setCurrentIndex(idx)} 
+                        className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-[#7B2CFF] w-6' : 'bg-white/50'}`} 
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
               
               {/* Indicadores desktop */}
-              <div className="hidden lg:flex justify-center gap-2 mt-6">
-                {dishes.map((_, idx) => (
-                  <button key={idx} onClick={() => setCurrentIndex(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-[#7B2CFF] w-6' : 'bg-[#F4F6FA]/30'}`} />
-                ))}
-              </div>
+              {items.length > 1 && (
+                <div className="hidden lg:flex justify-center gap-2 mt-6">
+                  {items.map((_, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => setCurrentIndex(idx)} 
+                      className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-[#7B2CFF] w-6' : 'bg-[#F4F6FA]/30'}`} 
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Checkout Dialog - único para ambos */}
+      {/* Checkout Dialog */}
       <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
         <DialogContent className="bg-[#141419] border border-[#7B2CFF]/20 max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0">
           <DialogHeader className="p-6 pb-2">
@@ -303,12 +491,36 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
           <div className="p-6 pt-2 space-y-4">
             {paymentStep === 'form' && (
               <>
-                <div className="bg-[#0B0B10] rounded-xl p-4 space-y-2">
-                  <h4 className="text-[#A7ACB8] text-xs font-bold uppercase mb-2">Resumo</h4>
+                {/* Lista de itens do carrinho com controles de quantidade */}
+                <div className="bg-[#0B0B10] rounded-xl p-4 space-y-3">
+                  <h4 className="text-[#A7ACB8] text-xs font-bold uppercase mb-2">Itens do Pedido</h4>
                   {cartItems.map((item) => (
-                    <div key={item.id} className="flex justify-between text-[#F4F6FA] text-sm">
-                      <span>{item.quantity}x {item.name}</span>
-                      <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                    <div key={item.id} className="flex items-center justify-between text-[#F4F6FA] text-sm">
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => updateQty(item.id, -1)}
+                          className="w-6 h-6 rounded bg-[#2A2A35] text-[#A7ACB8] hover:text-[#F4F6FA] flex items-center justify-center"
+                        >
+                          −
+                        </button>
+                        <span>{item.quantity}x</span>
+                        <button 
+                          onClick={() => updateQty(item.id, 1)}
+                          className="w-6 h-6 rounded bg-[#2A2A35] text-[#A7ACB8] hover:text-[#F4F6FA] flex items-center justify-center"
+                        >
+                          +
+                        </button>
+                        <span className="ml-2">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                        <button 
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                   <div className="border-t border-[#2A2A35] pt-2 mt-2 flex justify-between text-[#7B2CFF] font-bold text-lg">
@@ -317,26 +529,53 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
                   </div>
                 </div>
 
+                {/* Formulário de dados */}
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs text-[#A7ACB8] block mb-1">Nome Completo *</label>
-                    <input type="text" value={customerData.name} onChange={(e) => setCustomerData({...customerData, name: e.target.value})} className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] text-sm focus:border-[#7B2CFF] outline-none" placeholder="Seu nome" />
+                    <input 
+                      type="text" 
+                      value={customerData.name} 
+                      onChange={(e) => setCustomerData({...customerData, name: e.target.value})} 
+                      className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] text-sm focus:border-[#7B2CFF] outline-none" 
+                      placeholder="Seu nome" 
+                    />
                   </div>
                   <div>
                     <label className="text-xs text-[#A7ACB8] block mb-1">WhatsApp *</label>
-                    <input type="tel" value={customerData.phone} onChange={(e) => setCustomerData({...customerData, phone: e.target.value})} className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] text-sm focus:border-[#7B2CFF] outline-none" placeholder="11999999999" />
+                    <input 
+                      type="tel" 
+                      value={customerData.phone} 
+                      onChange={(e) => setCustomerData({...customerData, phone: e.target.value})} 
+                      className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] text-sm focus:border-[#7B2CFF] outline-none" 
+                      placeholder="11999999999" 
+                    />
                   </div>
                   <div>
                     <label className="text-xs text-[#A7ACB8] block mb-1">Endereço</label>
-                    <textarea value={customerData.address} onChange={(e) => setCustomerData({...customerData, address: e.target.value})} className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] text-sm focus:border-[#7B2CFF] outline-none h-16 resize-none" placeholder="Rua, número, bairro..." />
+                    <textarea 
+                      value={customerData.address} 
+                      onChange={(e) => setCustomerData({...customerData, address: e.target.value})} 
+                      className="w-full bg-[#0B0B10] border border-[#2A2A35] rounded-lg p-3 text-[#F4F6FA] text-sm focus:border-[#7B2CFF] outline-none h-16 resize-none" 
+                      placeholder="Rua, número, bairro..." 
+                    />
                   </div>
                 </div>
 
+                {/* Seleção de horário */}
                 <div className="space-y-3">
-                  <h4 className="text-[#A7ACB8] text-xs font-bold uppercase flex items-center gap-2">🕐 Horário de Entrega *</h4>
+                  <h4 className="text-[#A7ACB8] text-xs font-bold uppercase flex items-center gap-2">
+                    🕐 Horário de Entrega *
+                  </h4>
                   <div className="grid grid-cols-4 gap-2">
                     {DELIVERY_HOURS.map((hour) => (
-                      <button key={hour} onClick={() => { setSelectedHour(hour); setSelectedSlot(null); }} className={`py-2 rounded-lg text-sm font-bold transition-all ${selectedHour === hour ? 'bg-[#7B2CFF] text-[#0B0B10]' : 'bg-[#2A2A35] text-[#A7ACB8]'}`}>
+                      <button 
+                        key={hour} 
+                        onClick={() => { setSelectedHour(hour); setSelectedSlot(null); }} 
+                        className={`py-2 rounded-lg text-sm font-bold transition-all ${
+                          selectedHour === hour ? 'bg-[#7B2CFF] text-[#0B0B10]' : 'bg-[#2A2A35] text-[#A7ACB8]'
+                        }`}
+                      >
                         {hour}h
                       </button>
                     ))}
@@ -344,7 +583,13 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
                   {selectedHour && (
                     <div className="space-y-2">
                       {DELIVERY_SLOTS[selectedHour].map((slot) => (
-                        <button key={slot} onClick={() => setSelectedSlot(slot)} className={`w-full py-2.5 px-3 rounded-lg text-sm transition-all flex items-center justify-between ${selectedSlot === slot ? 'bg-[#7B2CFF]/20 border border-[#7B2CFF] text-[#F4F6FA]' : 'bg-[#0B0B10] border border-[#2A2A35] text-[#A7ACB8]'}`}>
+                        <button 
+                          key={slot} 
+                          onClick={() => setSelectedSlot(slot)} 
+                          className={`w-full py-2.5 px-3 rounded-lg text-sm transition-all flex items-center justify-between ${
+                            selectedSlot === slot ? 'bg-[#7B2CFF]/20 border border-[#7B2CFF] text-[#F4F6FA]' : 'bg-[#0B0B10] border border-[#2A2A35] text-[#A7ACB8]'
+                          }`}
+                        >
                           <span>{slot}</span>
                           {selectedSlot === slot && <CheckCircle2 className="w-4 h-4 text-[#7B2CFF]" />}
                         </button>
@@ -354,13 +599,21 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
                 </div>
 
                 {savedCustomer && (
-                  <button onClick={() => { CustomerManager.clear?.(); if (!CustomerManager.clear) localStorage.removeItem('@labellagratia:customer'); setCustomerData({ name: '', phone: '', address: '' }); }} className="text-xs text-[#A7ACB8] hover:text-[#7B2CFF] underline">
+                  <button 
+                    onClick={() => { 
+                      CustomerManager.clear?.(); 
+                      if (!CustomerManager.clear) localStorage.removeItem('@labellagratia:customer'); 
+                      setCustomerData({ name: '', phone: '', address: '' }); 
+                    }} 
+                    className="text-xs text-[#A7ACB8] hover:text-[#7B2CFF] underline"
+                  >
                     ✏️ Limpar dados salvos
                   </button>
                 )}
               </>
             )}
 
+            {/* PIX e Confirmação */}
             {paymentStep === 'pix' && pixCode && (
               <div className="space-y-4">
                 <div className="bg-[#0B0B10] rounded-xl p-4 text-center">
@@ -415,16 +668,35 @@ export function MenuSection({ dishes, onAddToCart, isOrderingOpen }: MenuSection
           <div className="p-6 pt-2 border-t border-[#2A2A35]">
             {paymentStep === 'form' && (
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setShowCheckout(false)} className="flex-1 text-[#A7ACB8] border-[#2A2A35] hover:bg-[#2A2A35]">Cancelar</Button>
-                <Button onClick={generatePix} disabled={!customerData.name.trim() || !customerData.phone.trim() || !selectedSlot} className="flex-1 btn-primary">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCheckout(false)} 
+                  className="flex-1 text-[#A7ACB8] border-[#2A2A35] hover:bg-[#2A2A35]"
+                >
+                  Continuar Comprando
+                </Button>
+                <Button 
+                  onClick={generatePix} 
+                  disabled={!customerData.name.trim() || !customerData.phone.trim() || !selectedSlot || cartItems.length === 0} 
+                  className="flex-1 btn-primary"
+                >
                   Gerar PIX <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             )}
             {paymentStep === 'pix' && (
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setPaymentStep('form')} className="flex-1 text-[#A7ACB8] border-[#2A2A35] hover:bg-[#2A2A35]">Voltar</Button>
-                <Button onClick={confirmPayment} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setPaymentStep('form')} 
+                  className="flex-1 text-[#A7ACB8] border-[#2A2A35] hover:bg-[#2A2A35]"
+                >
+                  Voltar
+                </Button>
+                <Button 
+                  onClick={confirmPayment} 
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+                >
                   <CheckCircle2 className="w-4 h-4 mr-2" /> Já paguei ✓
                 </Button>
               </div>

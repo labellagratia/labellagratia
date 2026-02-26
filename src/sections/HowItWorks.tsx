@@ -48,6 +48,7 @@ type TabType = 'como-funciona' | 'chef';
 
 export function HowItWorks() {
   const [activeTab, setActiveTab] = useState<TabType>('como-funciona');
+  const [heartClicked, setHeartClicked] = useState(false); // ✅ Estado para o coração
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -217,23 +218,31 @@ export function HowItWorks() {
           ) : (
             /* Chef Profile Content */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-              {/* Foto da Chef */}
-              <div className="relative order-2 lg:order-1">
+              {/* ✅ Foto da Chef - Invertido: agora order-1 no mobile (embaixo), order-1 no lg (esquerda) */}
+              <div className="relative order-1 lg:order-1">
                 <div className="relative aspect-[4/5] max-w-md mx-auto lg:max-w-none rounded-[28px] overflow-hidden shadow-2xl border border-[rgba(123,44,255,0.2)]">
                   <img
-                    src="/chef-photo.jpeg"
-                    alt="Patricia de Fátima - Chef La Bella Gratia"
+                    src="/chef-photo2.jpeg"
+                    alt="Patricia de Fátima - Personal Chef La Bella Gratia"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B10]/60 via-transparent to-transparent" />
                 </div>
 
-                {/* Badge flutuante */}
+                {/* ✅ Badge flutuante com coração clicável */}
                 <div className="absolute -bottom-4 -right-4 lg:bottom-8 lg:-right-4 bg-[#141419] border border-[#7B2CFF]/30 rounded-2xl p-4 shadow-xl">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#7B2CFF]/20 flex items-center justify-center">
-                      <Heart className="w-5 h-5 text-[#7B2CFF]" />
-                    </div>
+                    <button
+                      onClick={() => setHeartClicked(!heartClicked)}
+                      className="w-10 h-10 rounded-full bg-[#7B2CFF]/20 flex items-center justify-center hover:scale-110 transition-transform focus:outline-none"
+                      aria-label="Curtir"
+                    >
+                      <Heart 
+                        className={`w-5 h-5 transition-colors duration-300 ${
+                          heartClicked ? 'text-red-500 fill-red-500' : 'text-[#7B2CFF]'
+                        }`} 
+                      />
+                    </button>
                     <div>
                       <p className="text-[#F4F6FA] font-bold text-sm">Cozinha com Amor</p>
                       <p className="text-[#A7ACB8] text-xs">Desde a infância</p>
@@ -242,8 +251,8 @@ export function HowItWorks() {
                 </div>
               </div>
 
-              {/* Texto e Highlights */}
-              <div className="order-1 lg:order-2 space-y-6">
+              {/* ✅ Texto e Highlights - Invertido: agora order-2 no mobile (em cima), order-2 no lg (direita) */}
+              <div className="order-2 lg:order-2 space-y-6">
                 <div className="space-y-4 text-[#A7ACB8] leading-relaxed">
                   <p className="text-lg">
                     Cozinhando desde a infância, Patricia acumula longa experiência gastronômica: 

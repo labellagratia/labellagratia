@@ -1,9 +1,9 @@
 // src/components/Header.tsx
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Menu, User } from 'lucide-react'; // ✅ Adicionado User
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ShoppingBag, Menu, User } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'; // ✅ Adicionado SheetTitle
 import { CartDrawer } from './CartDrawer';
-import { ChefProfile } from './ChefProfile'; // ✅ Import do novo componente
+import { ChefProfile } from './ChefProfile';
 
 export interface CartItem {
   id: string;
@@ -32,7 +32,7 @@ export function Header({
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
-  const [chefProfileOpen, setChefProfileOpen] = useState(false); // ✅ Estado para o perfil
+  const [chefProfileOpen, setChefProfileOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,7 +85,6 @@ export function Header({
               >
                 Como Funciona
               </button>
-              {/* ✅ Botão "Sobre" - Desktop */}
               <button
                 onClick={() => setChefProfileOpen(true)}
                 className="text-sm text-[#A7ACB8] hover:text-[#7B2CFF] transition-colors flex items-center gap-1"
@@ -98,7 +97,7 @@ export function Header({
             {/* Actions */}
             <div className="flex items-center gap-3">
               
-              {/* Cart */}
+              {/* Cart - ✅ REMOVIDO o h2 duplicado */}
               <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
                 <SheetTrigger asChild>
                   <button className="relative p-2 text-[#F4F6FA] hover:text-[#7B2CFF] transition-colors">
@@ -112,9 +111,10 @@ export function Header({
                 </SheetTrigger>
                 <SheetContent 
                   side="right" 
-                  className="w-full sm:max-w-md bg-[#141419] border-l border-[#2A2A35]"
+                  className="w-full sm:max-w-md bg-[#141419] border-l border-[#2A2A35] p-0" // ✅ p-0 para o CartDrawer controlar o padding
                 >
-                  <h2 className="text-xl font-bold text-[#F4F6FA] mb-4">Seu Pedido</h2>
+                  {/* ✅ SheetTitle para acessibilidade (visually hidden se necessário) */}
+                  <SheetTitle className="sr-only">Carrinho de Compras</SheetTitle>
                   <CartDrawer
                     items={cartItems}
                     total={cartTotal}
@@ -152,7 +152,6 @@ export function Header({
                     >
                       Como Funciona
                     </button>
-                    {/* ✅ Botão "Sobre" - Mobile */}
                     <button
                       onClick={() => { setChefProfileOpen(true); setMobileMenuOpen(false); }}
                       className="text-left text-lg text-[#F4F6FA] hover:text-[#7B2CFF] transition-colors flex items-center gap-2"
@@ -175,7 +174,7 @@ export function Header({
         </div>
       </header>
 
-      {/* ✅ Modal do Perfil da Cozinheira (fora do header, no mesmo nível) */}
+      {/* ✅ ChefProfile - O X duplicado deve ser corrigido no ChefProfile.tsx */}
       <ChefProfile 
         open={chefProfileOpen} 
         onOpenChange={setChefProfileOpen} 

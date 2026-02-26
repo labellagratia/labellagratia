@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Header } from '@/components/Header';
@@ -10,14 +10,12 @@ import { MenuSection } from '@/sections/MenuSection';
 import { useCart } from '@/hooks/useCart';
 import { useMenu } from '@/hooks/useMenu';
 import { Toaster } from '@/components/ui/sonner';
-import { toast } from 'sonner';
-import type { Dish } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
 
 function App() {
-  const { items, addItem, removeItem, updateQuantity, total, itemCount } = useCart();
-  const { menu, isOrderingOpen } = useMenu();
+  const { items, removeItem, updateQuantity, total, itemCount } = useCart();
+  const { isOrderingOpen } = useMenu();
 
   const orderingOpen = typeof isOrderingOpen === 'function'
     ? !!isOrderingOpen()
@@ -72,32 +70,10 @@ function App() {
     };
   }, []);
 
-  // ✅ handleAddToCart (mantido)
-  const handleAddToCart = useCallback(
-    (dish: Dish) => {
-      if (!orderingOpen) {
-        toast.error('Pedidos encerrados para esta semana');
-        return;
-      }
-      addItem(dish);
-      toast.success(`${dish.name} adicionado ao carrinho`);
-    },
-    [addItem, orderingOpen]
-  );
-
-  // ✅ scrollToMenu (mantido)
-  const scrollToMenu = useCallback(() => {
+  // ✅ scrollToMenu (função direta, não useCallback)
+  const scrollToMenu = () => {
     document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  // ✅ Loading state
-  if (!menu?.dishes) {
-    return (
-      <div className="min-h-screen bg-[#0B0B10] flex items-center justify-center">
-        <p className="text-[#A7ACB8]">Carregando cardápio...</p>
-      </div>
-    );
-  }
+  };
 
   return (
     <div className="relative bg-[#0B0B10] min-h-screen text-[#F4F6FA]">
@@ -117,11 +93,7 @@ function App() {
         <HowItWorks />
         
         {/* ✅ MenuSection com checkout interno */}
-        <MenuSection
-          dishes={menu.dishes}
-          onAddToCart={handleAddToCart}
-          isOrderingOpen={orderingOpen}
-        />
+        <MenuSection isOrderingOpen={orderingOpen} />
 
         <Footer />
       </main>

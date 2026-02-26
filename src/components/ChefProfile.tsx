@@ -1,7 +1,7 @@
 // src/components/ChefProfile.tsx
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, MapPin, Clock, Award } from 'lucide-react';
+import { MapPin, Clock, Award } from 'lucide-react'; // ❌ Removido X daqui
 
 interface ChefProfileProps {
   open: boolean;
@@ -13,15 +13,14 @@ export function ChefProfile({ open, onOpenChange }: ChefProfileProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#141419] border border-[rgba(123,44,255,0.22)] max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-[#F4F6FA] text-xl flex items-center justify-between">
+          {/* ✅ Removido o justify-between e o botão X manual */}
+          <DialogTitle className="text-[#F4F6FA] text-xl">
             Sobre a Cozinheira
-            <button 
-              onClick={() => onOpenChange(false)} 
-              className="text-[#A7ACB8] hover:text-[#F4F6FA] transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </DialogTitle>
+          {/* ✅ Adicionado DialogDescription para acessibilidade (opcional mas recomendado) */}
+          <DialogDescription className="sr-only">
+            Perfil da cozinheira Patricia Fernandes
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
@@ -30,7 +29,7 @@ export function ChefProfile({ open, onOpenChange }: ChefProfileProps) {
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#7B2CFF] shadow-2xl">
                 <img 
-                  src="/chef-photo.jpeg"  // ← Coloque a foto em public/chef.jpg
+                  src="/chef-photo.jpeg"
                   alt="Patricia, cozinheira do La Bella Gratia" 
                   className="w-full h-full object-cover"
                 />
@@ -63,7 +62,7 @@ export function ChefProfile({ open, onOpenChange }: ChefProfileProps) {
               <ul className="space-y-2">
                 <li className="flex items-start gap-2 text-sm text-[#F4F6FA]">
                   <Award className="w-4 h-4 text-[#7B2CFF] mt-0.5 flex-shrink-0" />
-                  <span>Cozinha familiar tradicional •  cozinha contemporânea</span>
+                  <span>Cozinha familiar tradicional • cozinha contemporânea</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-[#F4F6FA]">
                   <Award className="w-4 h-4 text-[#7B2CFF] mt-0.5 flex-shrink-0" />
